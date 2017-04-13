@@ -68,7 +68,7 @@ void setup() {
   // initialize serial communications at 9600 bps:
   Serial.begin(9600);
   
-  strip.setBrightness(255/3);
+  strip.setBrightness(255/4);
   
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
