@@ -68,6 +68,7 @@ void setup() {
   // initialize serial communications at 9600 bps:
   Serial.begin(9600);
   
+  //Change the overall brightness due to power requirements
   strip.setBrightness(255/4);
   
   strip.begin();
