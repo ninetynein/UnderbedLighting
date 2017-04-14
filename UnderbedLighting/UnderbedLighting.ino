@@ -64,12 +64,14 @@ int aheadButtonState = 0;
 int backButtonState = 0;
 int toggleButtonState = 0;
 
+int currentPattern = 0;          // value of the pattern when in pattern mode
+
 void setup() {
   // initialize serial communications at 9600 bps:
   Serial.begin(9600);
   
   //Change the overall brightness due to power requirements
-  strip.setBrightness(255/4);
+  strip.setBrightness(255/5);
   
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
@@ -83,38 +85,56 @@ void setup() {
 }
 
 void ModeRGB() {
+  // Set color based on POT values
   
   // map it to the range of the analog out:
   outputValueRed = map(sensorValueRed, 0, 1023, 0, 254);
   outputValueGreen = map(sensorValueGreen, 0, 1023, 0, 254);
   outputValueBlue = map(sensorValueBlue, 0, 1023, 0, 254);
   
+  // set the color
   colorWipe(strip.Color(outputValueRed, outputValueGreen, outputValueBlue), 10);
    
   // print the results to the serial monitor:
-  Serial.print("Red = " );
+/*  Serial.print("Red = " );
   Serial.print(outputValueRed);
   Serial.print("\t Green = " );
   Serial.print(outputValueGreen);
   Serial.print("\t Blue = " );
-  Serial.print(outputValueBlue);
-/*  
-  Serial.print("\t Toggle = " );
-  Serial.print(toggleButtonState);
-  Serial.print("\t ahead = " );
-  Serial.print(aheadButtonState);
-  Serial.print("\t back = " );
-  Serial.print(backButtonState);
-  */
-  Serial.println(); 
+  Serial.print(outputValueBlue);*/
+  
+ 
 }
 
 void ModePatterns() {
   // ToDo: Do something 
+    
+  // read the state of the pushbutton value:
+  aheadButtonState = digitalRead(aheadInPin);
+  backButtonState = digitalRead(backInPin);
   
+  if (aheadButtonState == HIGH && currentPattern >= 3){
+    currentPattern = (currentPattern + 1);
+  }
   
-  colorWipe(strip.Color(255, 0, 0), 10);
-  
+  if (backButtonState == LOW && currentPattern <= 0){
+    currentPattern = (currentPattern - 1);
+  }
+       
+  switch (currentPattern) {
+    case 0:    // your hand is on the sensor
+      Serial.println("dark");
+      break;
+    case 1:    // your hand is close to the sensor
+      Serial.println("dim");
+      break;
+    case 2:    // your hand is a few inches from the sensor
+      Serial.println("medium");
+      break;
+    case 3:    // your hand is nowhere near the sensor
+      Serial.println("bright");
+      break;
+    }  
 }
 
 void loop() {
@@ -122,10 +142,7 @@ void loop() {
   sensorValueRed = analogRead(analogInPinRed);
   sensorValueGreen = analogRead(analogInPinGreen);
   sensorValueBlue = analogRead(analogInPinBlue);
-  
-  // read the state of the pushbutton value:
-  aheadButtonState = digitalRead(aheadInPin);
-  backButtonState = digitalRead(backInPin);
+
 
   toggleButtonState = digitalRead(toggleInPin);
   if( toggleButtonState == 1 ) { 
@@ -134,13 +151,21 @@ void loop() {
      ModeRGB(); 
   }
    
-
+  Serial.print("\t Toggle = " );
+  Serial.print(toggleButtonState);
+  Serial.print("\t ahead = " );
+  Serial.print(aheadButtonState);
+  Serial.print("\t back = " );
+  Serial.print(backButtonState);
+  Serial.println();
 }
 
 // Fill the dots one after the other with a color
 void colorWipe(uint32_t c, uint8_t wait) {
   for(uint16_t i=0; i<strip.numPixels(); i++) {
     strip.setPixelColor(i, c);
+    
+   // enable if you want it to light up one LED at a time
    //delay(wait);
   }
   strip.show();
