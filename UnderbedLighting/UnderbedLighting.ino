@@ -46,7 +46,7 @@ const int analogInPinRed = A0;    // Analog input pin that the potentiometer is 
 const int analogInPinGreen = A1;  // Analog input pin that the potentiometer is attached to
 const int analogInPinBlue = A2;   // Analog input pin that the potentiometer is attached to
 
-const int toggleInPin = 5;     // toggle to set mode
+const int toggleInPin = 6;     // toggle to set mode
 
 const int aheadInPin = 9;     // the number of the pushbutton pin
 const int backInPin = 11;     // the number of the pushbutton pin
@@ -109,32 +109,42 @@ void ModeRGB() {
 void ModePatterns() {
   // ToDo: Do something 
     
-  // read the state of the pushbutton value:
+    // read the state of the pushbutton value:
   aheadButtonState = digitalRead(aheadInPin);
   backButtonState = digitalRead(backInPin);
   
-  if (aheadButtonState == HIGH && currentPattern >= 3){
+  // set the color to red to initialize
+  colorWipe(strip.Color(254, 0, 0), 10);
+  
+  if (aheadButtonState == HIGH && currentPattern <= 3){ //from 4...
     currentPattern = (currentPattern + 1);
   }
   
-  if (backButtonState == LOW && currentPattern <= 0){
+  if (backButtonState == LOW && currentPattern >= 2){  //to 0
     currentPattern = (currentPattern - 1);
   }
-       
+  
+  Serial.print("Current Pattern = " );
+  Serial.print(currentPattern);
+  Serial.println();
+  
+  
   switch (currentPattern) {
-    case 0:    // your hand is on the sensor
+    case 1:    // your hand is on the sensor
       Serial.println("dark");
       break;
-    case 1:    // your hand is close to the sensor
+    case 2:    // your hand is close to the sensor
       Serial.println("dim");
       break;
-    case 2:    // your hand is a few inches from the sensor
+    case 3:    // your hand is a few inches from the sensor
       Serial.println("medium");
       break;
-    case 3:    // your hand is nowhere near the sensor
+    case 4:    // your hand is nowhere near the sensor
       Serial.println("bright");
       break;
     }  
+    
+ 
 }
 
 void loop() {
@@ -151,6 +161,8 @@ void loop() {
      ModeRGB(); 
   }
    
+
+  
   Serial.print("\t Toggle = " );
   Serial.print(toggleButtonState);
   Serial.print("\t ahead = " );
@@ -170,3 +182,4 @@ void colorWipe(uint32_t c, uint8_t wait) {
   }
   strip.show();
 }
+
