@@ -60,11 +60,12 @@ int outputValueRed = 0;        // value output to the PWM (analog out)
 int outputValueGreen = 0;        // value output to the PWM (analog out)
 int outputValueBlue = 0;        // value output to the PWM (analog out)
 
-int aheadButtonState = 0;
-int backButtonState = 0;
-int toggleButtonState = 0;
-
+int aheadButtonState = LOW;
+int backButtonState = HIGH;
+int toggleButtonState = HIGH;
 int currentPattern = 0;          // value of the pattern when in pattern mode
+
+
 
 void setup() {
   // initialize serial communications at 9600 bps:
@@ -94,40 +95,89 @@ void ModeRGB() {
   
   // set the color
   colorWipe(strip.Color(outputValueRed, outputValueGreen, outputValueBlue), 10);
-   
-  // print the results to the serial monitor:
-/*  Serial.print("Red = " );
-  Serial.print(outputValueRed);
-  Serial.print("\t Green = " );
-  Serial.print(outputValueGreen);
-  Serial.print("\t Blue = " );
-  Serial.print(outputValueBlue);*/
-  
- 
 }
+
 
 void ModePatterns() {
   // ToDo: Do something 
     
-    // read the state of the pushbutton value:
-  aheadButtonState = digitalRead(aheadInPin);
-  backButtonState = digitalRead(backInPin);
+  // read the state of the pushbutton value:
+  int aheadButtonState = digitalRead(aheadInPin);
+  int backButtonState = digitalRead(backInPin);
+  int lastaheadButtonState = LOW;   // the previous reading from the input pin
+  int lastbackButtonState = HIGH;   // the previous reading from the input pin
+
+  // the following variables are unsigned long's because the time, measured in miliseconds,
+  // will quickly become a bigger number than can be stored in an int.
+  unsigned long lastaheadDebounceTime = 0;  // the last time the output pin was toggled
+  unsigned long lastbackDebounceTime = 0;  // the last time the output pin was toggled
+  unsigned long debounceDelay = 1000;    // the debounce time; increase if the output flickers
   
   // set the color to red to initialize
   colorWipe(strip.Color(254, 0, 0), 10);
   
-  if (aheadButtonState == HIGH && currentPattern <= 3){ //from 4...
-    currentPattern = (currentPattern + 1);
+   // check to see if you just pressed the button
+  // (i.e. the input went from LOW to HIGH),  and you've waited
+  // long enough since the last press to ignore any noise:
+
+  // If the switch changed, due to noise or pressing:
+  if (aheadButtonState!= lastaheadButtonState){
+    // reset the debouncing timer
+    lastaheadDebounceTime = millis();
   }
-  
-  if (backButtonState == LOW && currentPattern >= 2){  //to 0
-    currentPattern = (currentPattern - 1);
-  }
-  
-  Serial.print("Current Pattern = " );
-  Serial.print(currentPattern);
+  Serial.print("\t Ahead Debounce Time = " );
+  Serial.print(lastaheadDebounceTime);
   Serial.println();
   
+  if ((millis() - lastaheadDebounceTime) > debounceDelay) {
+    // whatever the reading is at, it's been there for longer
+    // than the debounce delay, so take it as the actual current state:
+
+    // if the button state has changed:
+    if (aheadButtonState != lastaheadButtonState) {
+      lastaheadButtonState = aheadButtonState;
+  
+      if ((aheadButtonState == HIGH) && (currentPattern <= 3)){ //from 4...
+        currentPattern = (currentPattern + 1);
+      }
+    }
+    
+  }
+
+  // save the reading.  Next time through the loop,
+  // it'll be the lastButtonState:
+  lastaheadButtonState = aheadButtonState;
+  
+ // check to see if you just pressed the button
+  // (i.e. the input went from LOW to HIGH),  and you've waited
+  // long enough since the last press to ignore any noise:
+
+  // If the switch changed, due to noise or pressing:
+  if (backButtonState!= lastbackButtonState){
+    // reset the debouncing timer
+    lastbackDebounceTime = millis();
+  }
+  Serial.print("\t Back Debounce Time = " );
+  Serial.print(lastbackDebounceTime);
+  Serial.println();
+  
+  if ((millis() - lastbackDebounceTime) > debounceDelay) {
+    // whatever the reading is at, it's been there for longer
+    // than the debounce delay, so take it as the actual current state:
+
+    // if the button state has changed:
+    if (backButtonState != lastbackButtonState) {
+      lastbackButtonState = backButtonState;
+      if ((backButtonState == LOW) && (currentPattern >= 2)){  //to 0
+        currentPattern = (currentPattern - 1);
+      }
+    }
+  }
+
+  // save the reading.  Next time through the loop,
+  // it'll be the lastButtonState:
+  lastbackButtonState = backButtonState;
+   
   
   switch (currentPattern) {
     case 1:    // your hand is on the sensor
@@ -143,7 +193,20 @@ void ModePatterns() {
       Serial.println("bright");
       break;
     }  
-    
+
+  Serial.print("\t Toggle = " );
+  Serial.print(toggleButtonState);
+  Serial.print("\t ahead = " );
+  Serial.print(aheadButtonState);
+  Serial.print("\t Lastahead = " );
+  Serial.print(lastaheadButtonState);
+  Serial.print("\t back = " );
+  Serial.print(backButtonState);
+  Serial.print("\t Lastback = " );
+  Serial.print(lastbackButtonState);
+  Serial.print("\t Current Pattern = " );
+  Serial.print(currentPattern);
+  Serial.println();
  
 }
 
@@ -161,15 +224,6 @@ void loop() {
      ModeRGB(); 
   }
    
-
-  
-  Serial.print("\t Toggle = " );
-  Serial.print(toggleButtonState);
-  Serial.print("\t ahead = " );
-  Serial.print(aheadButtonState);
-  Serial.print("\t back = " );
-  Serial.print(backButtonState);
-  Serial.println();
 }
 
 // Fill the dots one after the other with a color
