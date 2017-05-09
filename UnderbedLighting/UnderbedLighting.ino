@@ -1,25 +1,33 @@
 /*
-  Analog input, analog output, serial output
+This is a device that controls an LED strip.  The device has a toggle switch, three pots, and two buttons.
+The toggle switch switches between modes.  
+Mode 1 (toggle to the left) is RGB mode, where each pot controls the red green and blue value.  The buttons 
+are ignored in Mode 1
+Mode 2 (toggle to the right) is Pattern mode.  The black button cycles through the patterns in reverse
+and the red button cycles through the patterns forward.  The pots are ignored in this mode.
 
- Reads an analog input pin, maps the result to a range from 0 to 255
- and uses the result to set the pulsewidth modulation (PWM) of an output pin.
- Also prints the results to the serial monitor.
-
- The circuit:
- * potentiometer connected to analog pin 0.
-   Center pin of the potentiometer goes to the analog pin.
+The lights are a 5 meter strip of 60 LEDs/strip
+The circuit:
+ * Center pin of each potentiometer goes to the analog pin.
    side pins of the potentiometer go to +5V and ground
- * LED connected from digital pin 9 to ground
+   Red potentiometer connected to analog pin 0.
+   Green pot connected to analog pin 1
+   Red pot connected to analog pin 2
+ * LED strip connected to digital pin 4
+ * Ahead button is connected to pin 11
+ * Back button is connected to pin 9
+ 
+Power supply is a 5 volt, 2.4 amp wall wort
+ 
 
- created 29 Dec. 2008
- modified 9 Apr 2012
- by Tom Igoe
+ created April 2, 2017
+ by Tyson Haverkort and Steven Smethurst
 
- This example code is in the public domain.
+This code uses the NeoPixel Library and snipits from the Neopixel strand test cod (c) 2013 Shae Erisson
+released under the GPLv3 license to match the rest of the AdaFruit NeoPixel library
 
  */
- // NeoPixel Ring simple sketch (c) 2013 Shae Erisson
-// released under the GPLv3 license to match the rest of the AdaFruit NeoPixel library
+
 
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
@@ -30,7 +38,7 @@
 // On a Trinket or Gemma we suggest changing this to 1
 #define PIN 4
 
-// How many NeoPixels are attached to the Arduino?
+// How many NeoPixels are attached to the Arduino?  Pixels per metre (60) x number of metres (5)
 #define NUMPIXELS 300
 
 // When we setup the NeoPixel library, we tell it how many pixels, and which pin to use to send signals.
@@ -38,18 +46,20 @@
 // example for more information on possible values.
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
-//int delayval = 500; // delay for half a second
 
 // These constants won't change.  They're used to give names
 // to the pins used:
+// RGB pots
 const int analogInPinRed = A0;    // Analog input pin that the potentiometer is attached to
 const int analogInPinGreen = A1;  // Analog input pin that the potentiometer is attached to
 const int analogInPinBlue = A2;   // Analog input pin that the potentiometer is attached to
 
+// Toggle switch
 const int toggleInPin = 6;     // toggle to set mode
 
-const int aheadInPin = 9;     // the number of the pushbutton pin
-const int backInPin = 11;     // the number of the pushbutton pin
+// Ahead and back pattern buttons
+const int aheadInPin = 9;     // pushbutton pin to cycle forward through patterns
+const int backInPin = 11;     // pushbutton pin to cycle backwards through patterns
 
 
 int sensorValueRed = 0;        // value read from the pot
@@ -71,18 +81,33 @@ void setup() {
   // initialize serial communications at 9600 bps:
   Serial.begin(9600);
   
-  //Change the overall brightness due to power requirements
+  //Change the overall brightness due to power limitations
   strip.setBrightness(255/5);
   
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
   
   
-  // initialize the pushbutton pins as an input:
+  // initialize the pushbutton and toggle pins as an input:
   pinMode(aheadInPin, INPUT);
   pinMode(backInPin, INPUT);  
   pinMode(toggleInPin, INPUT);
   
+}
+
+void loop() {
+  // read the analog in value:
+  sensorValueRed = analogRead(analogInPinRed);
+  sensorValueGreen = analogRead(analogInPinGreen);
+  sensorValueBlue = analogRead(analogInPinBlue);
+
+  // Check the toggle switch and set the mode
+  toggleButtonState = digitalRead(toggleInPin);
+  if( toggleButtonState == 1 ) { 
+    ModePatterns(); 
+  } else {
+     ModeRGB(); 
+  }
 }
 
 void ModeRGB() {
@@ -99,7 +124,7 @@ void ModeRGB() {
 
 
 void ModePatterns() {
-  // ToDo: Do something 
+  // Run a series of patterns.  Cycle through when a button is pressed
     
   // read the state of the pushbutton value:
   int aheadButtonState = digitalRead(aheadInPin);
@@ -116,7 +141,7 @@ void ModePatterns() {
   // set the color to red to initialize
   colorWipe(strip.Color(254, 0, 0), 10);
   
-   // check to see if you just pressed the button
+  // check to see if you just pressed the button
   // (i.e. the input went from LOW to HIGH),  and you've waited
   // long enough since the last press to ignore any noise:
 
@@ -180,20 +205,21 @@ void ModePatterns() {
    
   
   switch (currentPattern) {
-    case 1:    // your hand is on the sensor
-      Serial.println("dark");
+    case 1:    // Pattern 1
+      Serial.println("Pattern 1");
       break;
-    case 2:    // your hand is close to the sensor
-      Serial.println("dim");
+    case 2:    // Pattern 2
+      Serial.println("Pattern 2");
       break;
-    case 3:    // your hand is a few inches from the sensor
-      Serial.println("medium");
+    case 3:    // Pattern 3
+      Serial.println("Pattern 3");
       break;
-    case 4:    // your hand is nowhere near the sensor
-      Serial.println("bright");
+    case 4:    // Pattern 4
+      Serial.println("Pattern 4");
       break;
     }  
 
+  // print out the case for debugging
   Serial.print("\t Toggle = " );
   Serial.print(toggleButtonState);
   Serial.print("\t ahead = " );
@@ -210,23 +236,8 @@ void ModePatterns() {
  
 }
 
-void loop() {
-  // read the analog in value:
-  sensorValueRed = analogRead(analogInPinRed);
-  sensorValueGreen = analogRead(analogInPinGreen);
-  sensorValueBlue = analogRead(analogInPinBlue);
-
-
-  toggleButtonState = digitalRead(toggleInPin);
-  if( toggleButtonState == 1 ) { 
-    ModePatterns(); 
-  } else {
-     ModeRGB(); 
-  }
-   
-}
-
-// Fill the dots one after the other with a color
+// TODO: Add pattern functions
+// Pattern 1: Fill the dots one after the other with a color
 void colorWipe(uint32_t c, uint8_t wait) {
   for(uint16_t i=0; i<strip.numPixels(); i++) {
     strip.setPixelColor(i, c);
