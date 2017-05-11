@@ -50,6 +50,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800
 // These constants won't change.  They're used to give names
 // to the pins used:
 // RGB pots
+// const int PIN_ANALOG_RED = A0;    // Analog input pin that the potentiometer is attached to
 const int analogInPinRed = A0;    // Analog input pin that the potentiometer is attached to
 const int analogInPinGreen = A1;  // Analog input pin that the potentiometer is attached to
 const int analogInPinBlue = A2;   // Analog input pin that the potentiometer is attached to
@@ -58,8 +59,8 @@ const int analogInPinBlue = A2;   // Analog input pin that the potentiometer is 
 const int toggleInPin = 6;     // toggle to set mode
 
 // Ahead and back pattern buttons
-const int aheadInPin = 9;     // pushbutton pin to cycle forward through patterns
-const int backInPin = 11;     // pushbutton pin to cycle backwards through patterns
+const int aheadInPin = 11;     // pushbutton pin to cycle forward through patterns
+const int backInPin = 9;     // pushbutton pin to cycle backwards through patterns
 
 
 int sensorValueRed = 0;        // value read from the pot
@@ -70,11 +71,25 @@ int outputValueRed = 0;        // value output to the PWM (analog out)
 int outputValueGreen = 0;        // value output to the PWM (analog out)
 int outputValueBlue = 0;        // value output to the PWM (analog out)
 
-int aheadButtonState = LOW;
-int backButtonState = HIGH;
 int toggleButtonState = HIGH;
+int buttonStateForward = HIGH;
+int buttonStateBack = HIGH;
+  
 int currentPattern = 0;          // value of the pattern when in pattern mode
+const int BUTTON_STATE_FORWARD_UP = HIGH;
+const int BUTTON_STATE_FORWARD_DOWN = LOW;
 
+const int BUTTON_STATE_BACKWARD_UP = LOW;
+const int BUTTON_STATE_BACKWARD_DOWN = HIGH;
+
+const int TOGLE_STATE_PATTERN = HIGH;
+const int TOGLE_STATE_RGB = LOW;
+
+
+const int PATTERN_COLOR_WIPE = 0 ; 
+const int PATTERN_RAINBOW = 1 ; 
+
+const int MAX_PATTERN = PATTERN_RAINBOW ; 
 
 
 void setup() {
@@ -95,19 +110,51 @@ void setup() {
   
 }
 
+
+
 void loop() {
   // read the analog in value:
   sensorValueRed = analogRead(analogInPinRed);
   sensorValueGreen = analogRead(analogInPinGreen);
   sensorValueBlue = analogRead(analogInPinBlue);
-
-  // Check the toggle switch and set the mode
   toggleButtonState = digitalRead(toggleInPin);
-  if( toggleButtonState == 1 ) { 
+  buttonStateForward = digitalRead(aheadInPin);
+  buttonStateBack = digitalRead(backInPin);
+  debugPrint(); 
+  
+  // Check the toggle switch and set the mode
+
+  if( toggleButtonState == TOGLE_STATE_PATTERN ) { 
     ModePatterns(); 
   } else {
      ModeRGB(); 
   }
+}
+
+void debugPrint() 
+{  
+  // print out the case for debugging
+  Serial.print("Toggle = " );
+  Serial.print(toggleButtonState == TOGLE_STATE_PATTERN ? "Pattern" : "RGB");
+  Serial.print("  ahead = " );
+  Serial.print(buttonStateForward == BUTTON_STATE_FORWARD_UP ? "Up" : "Down" );
+  Serial.print("  back = " );
+  Serial.print(buttonStateBack == BUTTON_STATE_BACKWARD_UP ? "Up" : "Down");
+  Serial.print("  currentPattern = " );
+  Serial.print(currentPattern);
+  
+
+  
+  Serial.print("  Red Pot = " );
+  Serial.print(sensorValueRed);
+  Serial.print("  Green Pot = " );
+  Serial.print(sensorValueGreen);
+  Serial.print("  Blue Pot = " );
+  Serial.print(sensorValueBlue);
+  
+  Serial.println();
+  
+  
 }
 
 void ModeRGB() {
@@ -123,117 +170,62 @@ void ModeRGB() {
 }
 
 
-void ModePatterns() {
-  // Run a series of patterns.  Cycle through when a button is pressed
-    
-  // read the state of the pushbutton value:
-  int aheadButtonState = digitalRead(aheadInPin);
-  int backButtonState = digitalRead(backInPin);
-  int lastaheadButtonState = LOW;   // the previous reading from the input pin
-  int lastbackButtonState = HIGH;   // the previous reading from the input pin
-
-  // the following variables are unsigned long's because the time, measured in miliseconds,
-  // will quickly become a bigger number than can be stored in an int.
-  unsigned long lastaheadDebounceTime = 0;  // the last time the output pin was toggled
-  unsigned long lastbackDebounceTime = 0;  // the last time the output pin was toggled
-  unsigned long debounceDelay = 1000;    // the debounce time; increase if the output flickers
+void ModePatterns() 
+{
+  // Check to see if the forward or back button has changed, and if we are chaning the pattern.
   
-  // set the color to red to initialize
-  colorWipe(strip.Color(254, 0, 0), 10);
-  
-  // check to see if you just pressed the button
-  // (i.e. the input went from LOW to HIGH),  and you've waited
-  // long enough since the last press to ignore any noise:
-
-  // If the switch changed, due to noise or pressing:
-  if (aheadButtonState!= lastaheadButtonState){
-    // reset the debouncing timer
-    lastaheadDebounceTime = millis();
-  }
-  Serial.print("\t Ahead Debounce Time = " );
-  Serial.print(lastaheadDebounceTime);
-  Serial.println();
-  
-  if ((millis() - lastaheadDebounceTime) > debounceDelay) {
-    // whatever the reading is at, it's been there for longer
-    // than the debounce delay, so take it as the actual current state:
-
-    // if the button state has changed:
-    if (aheadButtonState != lastaheadButtonState) {
-      lastaheadButtonState = aheadButtonState;
-  
-      if ((aheadButtonState == HIGH) && (currentPattern <= 3)){ //from 4...
-        currentPattern = (currentPattern + 1);
-      }
-    }
-    
-  }
-
-  // save the reading.  Next time through the loop,
-  // it'll be the lastButtonState:
-  lastaheadButtonState = aheadButtonState;
-  
- // check to see if you just pressed the button
-  // (i.e. the input went from LOW to HIGH),  and you've waited
-  // long enough since the last press to ignore any noise:
-
-  // If the switch changed, due to noise or pressing:
-  if (backButtonState!= lastbackButtonState){
-    // reset the debouncing timer
-    lastbackDebounceTime = millis();
-  }
-  Serial.print("\t Back Debounce Time = " );
-  Serial.print(lastbackDebounceTime);
-  Serial.println();
-  
-  if ((millis() - lastbackDebounceTime) > debounceDelay) {
-    // whatever the reading is at, it's been there for longer
-    // than the debounce delay, so take it as the actual current state:
-
-    // if the button state has changed:
-    if (backButtonState != lastbackButtonState) {
-      lastbackButtonState = backButtonState;
-      if ((backButtonState == LOW) && (currentPattern >= 2)){  //to 0
-        currentPattern = (currentPattern - 1);
-      }
+  static int lastBackButtonState = BUTTON_STATE_BACKWARD_UP ; 
+  if( lastBackButtonState != buttonStateBack ) {
+    lastBackButtonState = buttonStateBack ; 
+    if( buttonStateBack == BUTTON_STATE_BACKWARD_DOWN )  {
+      currentPattern-- ; 
     }
   }
-
-  // save the reading.  Next time through the loop,
-  // it'll be the lastButtonState:
-  lastbackButtonState = backButtonState;
-   
+  static int lastForwardButtonState = BUTTON_STATE_FORWARD_UP ; 
+  if( lastForwardButtonState != buttonStateForward ) {
+    lastForwardButtonState = buttonStateForward ; 
+    if( buttonStateForward == BUTTON_STATE_FORWARD_DOWN )  {
+      currentPattern++ ; 
+    }
+  }
+    
+  // Check the ranges of the current patter to make sure that it doesn't go out of bounds
+  if( currentPattern > MAX_PATTERN ) { 
+    currentPattern = MAX_PATTERN ; 
+  } else if(currentPattern < 0 ) { 
+    currentPattern = 0 ; 
+  }
   
-  switch (currentPattern) {
-    case 1:    // Pattern 1
-      Serial.println("Pattern 1");
+  
+  // Depending on the current pattern show a pattern 
+  
+  switch(currentPattern)  
+  {
+    case PATTERN_COLOR_WIPE:
+    {
+      patternColorWipe(); 
+      break ; 
+    }
+    case PATTERN_RAINBOW: 
+    {
+      patternRainbow(); 
       break;
-    case 2:    // Pattern 2
-      Serial.println("Pattern 2");
-      break;
-    case 3:    // Pattern 3
-      Serial.println("Pattern 3");
-      break;
-    case 4:    // Pattern 4
-      Serial.println("Pattern 4");
-      break;
-    }  
+    }
+  }
+  
+  return ;   
+}
 
-  // print out the case for debugging
-  Serial.print("\t Toggle = " );
-  Serial.print(toggleButtonState);
-  Serial.print("\t ahead = " );
-  Serial.print(aheadButtonState);
-  Serial.print("\t Lastahead = " );
-  Serial.print(lastaheadButtonState);
-  Serial.print("\t back = " );
-  Serial.print(backButtonState);
-  Serial.print("\t Lastback = " );
-  Serial.print(lastbackButtonState);
-  Serial.print("\t Current Pattern = " );
-  Serial.print(currentPattern);
-  Serial.println();
- 
+void patternColorWipe() {
+  static unsigned char hue = 0 ; 
+  colorWipe(strip.Color(hue, 0, 0), 10);  
+  hue += 20 ; 
+}
+
+void patternRainbow() {
+  static unsigned char hue = 0 ; 
+  colorWipe(strip.Color(0, hue, 0), 10);  
+  hue += 20 ; 
 }
 
 // TODO: Add pattern functions
