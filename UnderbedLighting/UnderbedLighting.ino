@@ -86,10 +86,16 @@ const int TOGLE_STATE_PATTERN = HIGH;
 const int TOGLE_STATE_RGB = LOW;
 
 
-const int PATTERN_COLOR_WIPE = 0 ; 
-const int PATTERN_RAINBOW = 1 ; 
-
-const int MAX_PATTERN = PATTERN_RAINBOW ; 
+const int PATTERN_COLOR_WIPE_RED = 0 ; 
+const int PATTERN_COLOR_WIPE_GREEN = 1 ; 
+const int PATTERN_COLOR_WIPE_BLUE = 2 ; 
+const int PATTERN_RAINBOW = 3 ; 
+const int PATTERN_RAINBOW_CYCLE = 4 ;
+const int PATTERN_THEATER_CHASE_RED = 5 ;
+const int PATTERN_THEATER_CHASE_GREEN = 6 ;
+const int PATTERN_THEATER_CHASE_BLUE = 7 ;
+const int PATTERN_THEATER_CHASE_RAINBOW = 8 ;
+const int MAX_PATTERN = PATTERN_THEATER_CHASE_RAINBOW ; 
 
 
 void setup() {
@@ -201,35 +207,79 @@ void ModePatterns()
   
   switch(currentPattern)  
   {
-    case PATTERN_COLOR_WIPE:
+    case PATTERN_COLOR_WIPE_RED:
     {
-      patternColorWipe(); 
+      patternColorWipeRed(); 
+      break ; 
+    }
+    case PATTERN_COLOR_WIPE_GREEN:
+    {
+      patternColorWipeGreen(); 
+      break ; 
+    }
+    case PATTERN_COLOR_WIPE_BLUE:
+    {
+      patternColorWipeBlue(); 
       break ; 
     }
     case PATTERN_RAINBOW: 
     {
-      patternRainbow(); 
+      patternRainbow(20); 
+      break;
+    }
+    case PATTERN_RAINBOW_CYCLE: 
+    {
+      patternRainbowCycle(20); 
+      break;
+    }
+    case PATTERN_THEATER_CHASE_RED: 
+    {
+      patternTheaterChase(strip.Color(127, 0, 0), 50); // Red
+      break;
+    }
+    case PATTERN_THEATER_CHASE_GREEN:
+    {
+      patternTheaterChase(strip.Color(0, 127, 0), 50); // Green
+      break;
+    }
+
+    case PATTERN_THEATER_CHASE_BLUE: 
+    {
+      patternTheaterChase(strip.Color(0, 0, 127), 50); // Blue; 
+      break;
+    }
+
+    case PATTERN_THEATER_CHASE_RAINBOW: 
+    {
+      patternTheaterChaseRainbow(20); 
       break;
     }
   }
   
   return ;   
 }
-
-void patternColorWipe() {
+// Pattern 1 red increase
+void patternColorWipeRed() {
   static unsigned char hue = 0 ; 
-  colorWipe(strip.Color(hue, 0, 0), 10);  
+  colorWipe(strip.Color(hue, 0, 0), 5);  
   hue += 20 ; 
 }
 
-void patternRainbow() {
+// Pattern 2 Green increase
+void patternColorWipeGreen() {
   static unsigned char hue = 0 ; 
-  colorWipe(strip.Color(0, hue, 0), 10);  
+  colorWipe(strip.Color(0,hue, 0), 5);  
   hue += 20 ; 
 }
 
-// TODO: Add pattern functions
-// Pattern 1: Fill the dots one after the other with a color
+// Pattern 3 Blue increase
+void patternColorWipeBlue() {
+  static unsigned char hue = 0 ; 
+  colorWipe(strip.Color(0, 0, hue), 5);  
+  hue += 20 ; 
+}
+
+// Patterns 1-3: color wipes Fill the dots one after the other with a color
 void colorWipe(uint32_t c, uint8_t wait) {
   for(uint16_t i=0; i<strip.numPixels(); i++) {
     strip.setPixelColor(i, c);
@@ -237,6 +287,81 @@ void colorWipe(uint32_t c, uint8_t wait) {
    // enable if you want it to light up one LED at a time
    //delay(wait);
   }
+  
   strip.show();
 }
 
+// Pattern 4 rainbow
+void patternRainbow(uint8_t wait) {
+  uint16_t i, j;
+
+  for(j=0; j<256; j++) {
+    for(i=0; i<strip.numPixels(); i++) {
+      strip.setPixelColor(i, Wheel((i+j) & 255));
+    }
+//
+//
+    strip.show();
+
+  }
+}
+
+// Pattern 5 Slightly different, this makes the rainbow equally distributed throughout
+void patternRainbowCycle(uint8_t wait) {
+  uint16_t i, j;
+
+  for(j=0; j<256*5; j++) { // 5 cycles of all colors on wheel
+    for(i=0; i< strip.numPixels(); i++) {
+      strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
+    }
+    strip.show();
+  }
+}
+
+//Patterns 6-8 Theatre-style crawling lights.
+void patternTheaterChase(uint32_t c, uint8_t wait) {
+  for (int j=0; j<10; j++) {  //do 10 cycles of chasing
+    for (int q=0; q < 3; q++) {
+      for (int i=0; i < strip.numPixels(); i=i+3) {
+        strip.setPixelColor(i+q, c);    //turn every third pixel on
+      }
+      strip.show();
+      delay(wait);
+
+      for (int i=0; i < strip.numPixels(); i=i+3) {
+        strip.setPixelColor(i+q, 0);        //turn every third pixel off
+      }
+    }
+  }
+}
+
+// Pattern 9 Theatre-style crawling lights with rainbow effect
+void patternTheaterChaseRainbow(uint8_t wait) {
+  for (int j=0; j < 256; j++) {     // cycle all 256 colors in the wheel
+    for (int q=0; q < 3; q++) {
+      for (int i=0; i < strip.numPixels(); i=i+3) {
+        strip.setPixelColor(i+q, Wheel( (i+j) % 255));    //turn every third pixel on
+      }
+      strip.show();
+
+      for (int i=0; i < strip.numPixels(); i=i+3) {
+        strip.setPixelColor(i+q, 0);        //turn every third pixel off
+      }
+    }
+  }
+}
+
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(byte WheelPos) {
+  WheelPos = 255 - WheelPos;
+  if(WheelPos < 85) {
+    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  }
+  if(WheelPos < 170) {
+    WheelPos -= 85;
+    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+  WheelPos -= 170;
+  return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+}
